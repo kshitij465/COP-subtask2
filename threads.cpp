@@ -3,11 +3,10 @@
 #include<unistd.h>
 #include<stdlib.h>
 #include <vector>
-#include <chrono>
 #include <iostream>
 using namespace std;
 
-
+/* defining struct for input format to rowmult */
 struct ksh
 {   vector<vector<float> >* matrix;
     vector<vector<float> >* weight;
@@ -18,6 +17,7 @@ struct ksh
 
 };
 
+/* function for matrix multiplication for a subset of rows */
 void* rowmult(void* arg){
     struct ksh* lmao = (struct ksh *) arg;
     int l=lmao->l;
@@ -38,9 +38,10 @@ vector<vector<float>> mult_matrix_pthread(vector<vector<float>> matrix,vector<ve
     int extra=matrix.size()%thr;
     int maxindex=0;
     vector<vector<float>> ans(bias.size(),vector<float>(bias[0].size(),0.0));
+
+    /* creating threads and dividing computation among them */
     struct ksh strr[thr];
     pthread_t threads[thr];
-    auto start_timer = chrono::high_resolution_clock::now();
     for(int i=0;i<thr;i++){
         int l=maxindex;
         int r=maxindex+perthread-1;
@@ -48,20 +49,15 @@ vector<vector<float>> mult_matrix_pthread(vector<vector<float>> matrix,vector<ve
         strr[i].ans=&ans;
         if(i+1<=extra){r++;}
         strr[i].r=r;
-        // cout<<l<<" "<<r<<"\n";
         strr[i].matrix=&matrix;
         strr[i].weight=&weight;
         strr[i].bias=&bias;
         maxindex=r+1;
-        // cout<<l<<" "<<r<<"\n"; 
-        
         pthread_create(&threads[i], NULL,rowmult,&strr[i]);
     }
 
+    /* joining threads */
     for(int i=0;i<thr;i++){pthread_join(threads[i], NULL);}
-    auto stop_timer = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::nanoseconds>(stop_timer - start_timer);
-    cout << "Time taken by pthread mult : " << ((long double)duration.count())/((long double) 1e9) <<"s "<< endl;
     return ans;
 
 }
